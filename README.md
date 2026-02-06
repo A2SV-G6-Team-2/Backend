@@ -21,3 +21,8 @@ Replace **postgres** with your *PostgreSQL username* if different.
 ```bash
 cp .env.example .env
 ```
+
+## How to run the application
+```bash
+go run main.go
+```
