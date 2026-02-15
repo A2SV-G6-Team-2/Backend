@@ -1,0 +1,14 @@
+package auth
+
+import "golang.org/x/crypto/bcrypt"
+
+type BcryptHasher struct{}
+
+func (BcryptHasher) Hash(p string) (string, error) {
+	b, err := bcrypt.GenerateFromPassword([]byte(p), bcrypt.DefaultCost)
+	return string(b), err
+}
+
+func (BcryptHasher) Compare(p, hash string) error {
+	return bcrypt.CompareHashAndPassword([]byte(hash), []byte(p))
+}

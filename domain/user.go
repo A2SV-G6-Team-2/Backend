@@ -15,3 +15,9 @@ type User struct {
 	DefaultCurrency string    `json:"default_currency"`
 	CreatedAt       time.Time `json:"created_at"`
 }
+
+type UpdateUserInput struct {
+	Name            *string
+	BudgetingStyle  *string
+	DefaultCurrency *string
+}
