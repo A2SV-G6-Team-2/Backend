@@ -23,6 +23,8 @@ func main() {
 
 	// Repositories
 	userRepo := repositoryPG.NewUserRepoPG(db.DB)
+	expenseRepo := repositoryPG.NewExpenseRepoPG(db.DB)
+	debtRepo := repositoryPG.NewDebtRepoPG(db.DB)
 
 	// Infrastructure services
 	hasher := auth.BcryptHasher{}
@@ -31,10 +33,12 @@ func main() {
 	// Usecases
 	authUC := usecases.NewAuthUsecase(userRepo, hasher, jwtSvc)
 	userUC := usecases.NewUserUsecase(userRepo)
+	reportUC := usecases.NewReportUsecase(expenseRepo, debtRepo)
 
 	// Handlers
 	authHandler := delivery.NewAuthHandler(authUC)
 	userHandler := delivery.NewUserHandler(userUC, jwtSvc)
+	reportHandler := delivery.NewReportHandler(reportUC, jwtSvc)
 
 	// Routes
 	mux := http.NewServeMux()
@@ -42,6 +46,7 @@ func main() {
 	mux.HandleFunc("/auth/login", authHandler.Login)
 	mux.HandleFunc("/user/profile", userHandler.GetProfile)
 	mux.HandleFunc("/user/update", userHandler.UpdateProfile)
+	mux.HandleFunc("/reports/weekly", reportHandler.GetWeeklyReport)
 
 	// Start server
 	log.Println("Server started on :8080")
