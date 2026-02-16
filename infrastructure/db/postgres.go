@@ -31,6 +31,6 @@ func DB_Init() error {
 		return err
 	}
 
-	log.Println("DB Connected Successfully!")
+	log.Println("Postgres Connected Successfully!")
 	return DB.Ping()
 }
