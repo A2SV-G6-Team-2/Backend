@@ -34,7 +34,7 @@ func main() {
 
 	// Handlers
 	authHandler := delivery.NewAuthHandler(authUC)
-	userHandler := delivery.NewUserHandler(userUC)
+	userHandler := delivery.NewUserHandler(userUC, jwtSvc)
 
 	// Routes
 	mux := http.NewServeMux()

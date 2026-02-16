@@ -2,7 +2,9 @@ package auth
 
 import "golang.org/x/crypto/bcrypt"
 
-type BcryptHasher struct{}
+type BcryptHasher struct{
+	
+}
 
 func (BcryptHasher) Hash(p string) (string, error) {
 	b, err := bcrypt.GenerateFromPassword([]byte(p), bcrypt.DefaultCost)

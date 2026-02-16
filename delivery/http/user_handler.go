@@ -3,25 +3,33 @@ package http
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 
+	"expense_tracker/infrastructure/auth"
 	"expense_tracker/usecases"
-
-	"github.com/google/uuid"
 )
 
 type UserHandler struct {
 	userUC usecases.UserUsecase
+	jwt    *auth.JWTService
 }
 
-func NewUserHandler(uc usecases.UserUsecase) *UserHandler {
-	return &UserHandler{uc}
+func NewUserHandler(uc usecases.UserUsecase, jwt *auth.JWTService) *UserHandler {
+	return &UserHandler{userUC: uc, jwt: jwt}
 }
 
 func (h *UserHandler) GetProfile(w http.ResponseWriter, r *http.Request) {
-	idStr := r.URL.Query().Get("user_id")
-	userID, err := uuid.Parse(idStr)
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		http.Error(w, "missing authorization header", http.StatusUnauthorized)
+		return
+	}
+
+	tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
+
+	userID, err := h.jwt.Validate(tokenStr)
 	if err != nil {
-		http.Error(w, "invalid user id", http.StatusBadRequest)
+		http.Error(w, "invalid token", http.StatusUnauthorized)
 		return
 	}
 
@@ -35,10 +43,17 @@ func (h *UserHandler) GetProfile(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *UserHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
-	idStr := r.URL.Query().Get("user_id")
-	userID, err := uuid.Parse(idStr)
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		http.Error(w, "missing authorization header", http.StatusUnauthorized)
+		return
+	}
+
+	tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
+
+	userID, err := h.jwt.Validate(tokenStr)
 	if err != nil {
-		http.Error(w, "invalid user id", http.StatusBadRequest)
+		http.Error(w, "invalid token", http.StatusUnauthorized)
 		return
 	}
 
@@ -53,5 +68,9 @@ func (h *UserHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.WriteHeader(http.StatusNoContent)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{
+		"message": "Profile updated successfully",
+	})
 }

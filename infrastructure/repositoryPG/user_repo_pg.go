@@ -18,7 +18,7 @@ func NewUserRepoPG(db *sql.DB) *UserRepoPG {
 
 func (r *UserRepoPG) Create(ctx context.Context, u *domain.User) error {
 	query := `INSERT INTO users
-	(user_id, name, email, password_hash, budgeting_style, default_currency, default_currency)
+	(user_id, name, email, password_hash, budgeting_style, default_currency)
 	VALUES ($1, $2, $3, $4, $5, $6)`
 
 	_, err := r.DB.ExecContext(
@@ -52,7 +52,7 @@ func (r *UserRepoPG) GetByEmail(ctx context.Context, email string) (*domain.User
 
 func (r *UserRepoPG) GetByID(ctx context.Context, id uuid.UUID) (*domain.User, error) {
 	u := &domain.User{}
-	query := `SELECT user_id, name, email, password_hash, budgeting_style, default_currency, created_at
+	query := `SELECT user_id, name, email, budgeting_style, default_currency, created_at
 	FROM users
 	WHERE user_id=$1`
 
@@ -62,7 +62,7 @@ func (r *UserRepoPG) GetByID(ctx context.Context, id uuid.UUID) (*domain.User, e
 	return u, err
 }
 
-func (r *UserRepoPG) Update(ctx context.Context, userID uuid.UUID, in domain.UpdateUserInput) error {
+func (r *UserRepoPG) Update(ctx context.Context, u *domain.User) error {
 	query := `UPDATE users
 	SET
 		name = $1,
@@ -73,10 +73,10 @@ func (r *UserRepoPG) Update(ctx context.Context, userID uuid.UUID, in domain.Upd
 	_, err := r.DB.ExecContext(
 		ctx,
 		query,
-		in.Name,
-		in.BudgetingStyle,
-		in.DefaultCurrency,
-		userID,
+		u.Name,
+		u.BudgetingStyle,
+		u.DefaultCurrency,
+		u.UserID,
 	)
 	return err
 }
