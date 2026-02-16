@@ -8,6 +8,9 @@ import (
 
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
+	"github.com/pressly/goose/v3"
+
+	"expense_tracker/infrastructure/db/migrations"
 )
 
 var DB *sql.DB
@@ -28,6 +31,16 @@ func DB_Init() error {
 
 	DB, err = sql.Open("postgres", connStr)
 	if err != nil {
+		return err
+	}
+
+	if err := goose.SetDialect("postgres"); err != nil {
+		return err
+	}
+
+	goose.SetBaseFS(migrations.FS)
+
+	if err := goose.Up(DB, "."); err != nil {
 		return err
 	}
 
