@@ -53,7 +53,7 @@ func (h *ExpenseHandler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 	userID := UserIDFromRequest(r)
 	if userID == "" {
-		http.Error(w, "X-User-ID header required", http.StatusUnauthorized)
+		http.Error(w, "authorization required", http.StatusUnauthorized)
 		return
 	}
 
@@ -130,7 +130,7 @@ func (h *ExpenseHandler) List(w http.ResponseWriter, r *http.Request) {
 	}
 	userID := UserIDFromRequest(r)
 	if userID == "" {
-		http.Error(w, "X-User-ID header required", http.StatusUnauthorized)
+		http.Error(w, "authorization required", http.StatusUnauthorized)
 		return
 	}
 
@@ -177,7 +177,7 @@ func (h *ExpenseHandler) GetByID(w http.ResponseWriter, r *http.Request, id stri
 	}
 	userID := UserIDFromRequest(r)
 	if userID == "" {
-		http.Error(w, "X-User-ID header required", http.StatusUnauthorized)
+		http.Error(w, "authorization required", http.StatusUnauthorized)
 		return
 	}
 	if !isValidUUID(id) {
@@ -205,7 +205,7 @@ func (h *ExpenseHandler) Update(w http.ResponseWriter, r *http.Request, id strin
 	}
 	userID := UserIDFromRequest(r)
 	if userID == "" {
-		http.Error(w, "X-User-ID header required", http.StatusUnauthorized)
+		http.Error(w, "authorization required", http.StatusUnauthorized)
 		return
 	}
 	if !isValidUUID(id) {
@@ -276,7 +276,7 @@ func (h *ExpenseHandler) Delete(w http.ResponseWriter, r *http.Request, id strin
 	}
 	userID := UserIDFromRequest(r)
 	if userID == "" {
-		http.Error(w, "X-User-ID header required", http.StatusUnauthorized)
+		http.Error(w, "authorization required", http.StatusUnauthorized)
 		return
 	}
 	if !isValidUUID(id) {

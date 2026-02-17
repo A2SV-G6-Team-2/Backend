@@ -2,8 +2,8 @@ openapi: 3.0.3
 info:
   title: Personal Expense Tracker API
   description: |
-    Student Personal Expense Tracker – Team 2 endpoints (Expenses & Categories) and related API.
-    Use **X-User-ID** header (UUID) for mock user context.
+    Student Personal Expense Tracker – Team 2 endpoints (Expenses & Categories).
+    **Expenses and Categories require JWT.** Use `Authorization: Bearer <token>` (obtain token via POST /auth/login).
   version: 1.0.0
 
 servers:
@@ -12,9 +12,9 @@ servers:
 
 tags:
   - name: Expenses
-    description: Team 2 – Daily expense logging and management
+    description: Team 2 – Daily expense logging and management (JWT required)
   - name: Categories
-    description: Team 2 – Spending categories (global and user-defined)
+    description: Team 2 – Spending categories (JWT required for write; optional for list/get)
 
 paths:
   /expenses:
@@ -23,13 +23,9 @@ paths:
         - Expenses
       summary: List expenses
       description: List expenses for the current user. Optional filters by date range and category.
+      security:
+        - BearerAuth: []
       parameters:
-        - name: X-User-ID
-          in: header
-          required: true
-          schema:
-            type: string
-            format: uuid
         - name: from_date
           in: query
           description: Start date (YYYY-MM-DD)
@@ -58,19 +54,14 @@ paths:
                 items:
                   $ref: '#/components/schemas/Expense'
         '401':
-          description: Missing X-User-ID
+          description: Missing or invalid authorization
     post:
       tags:
         - Expenses
       summary: Create expense
       description: Create a new expense for the current user.
-      parameters:
-        - name: X-User-ID
-          in: header
-          required: true
-          schema:
-            type: string
-            format: uuid
+      security:
+        - BearerAuth: []
       requestBody:
         required: true
         content:
@@ -87,20 +78,16 @@ paths:
         '400':
           description: Validation error
         '401':
-          description: Missing X-User-ID
+          description: Missing or invalid authorization
 
   /expenses/{id}:
     get:
       tags:
         - Expenses
       summary: Get expense by ID
+      security:
+        - BearerAuth: []
       parameters:
-        - name: X-User-ID
-          in: header
-          required: true
-          schema:
-            type: string
-            format: uuid
         - name: id
           in: path
           required: true
@@ -120,13 +107,9 @@ paths:
       tags:
         - Expenses
       summary: Update expense
+      security:
+        - BearerAuth: []
       parameters:
-        - name: X-User-ID
-          in: header
-          required: true
-          schema:
-            type: string
-            format: uuid
         - name: id
           in: path
           required: true
@@ -151,13 +134,9 @@ paths:
       tags:
         - Expenses
       summary: Delete expense
+      security:
+        - BearerAuth: []
       parameters:
-        - name: X-User-ID
-          in: header
-          required: true
-          schema:
-            type: string
-            format: uuid
         - name: id
           in: path
           required: true
@@ -175,14 +154,9 @@ paths:
       tags:
         - Categories
       summary: List categories
-      description: List global and (when authenticated) user-defined categories.
-      parameters:
-        - name: X-User-ID
-          in: header
-          required: false
-          schema:
-            type: string
-            format: uuid
+      description: List global and user-defined categories for the authenticated user. Requires JWT.
+      security:
+        - BearerAuth: []
       responses:
         '200':
           description: List of categories
@@ -197,13 +171,8 @@ paths:
         - Categories
       summary: Create category
       description: Create a global or user-defined category.
-      parameters:
-        - name: X-User-ID
-          in: header
-          required: false
-          schema:
-            type: string
-            format: uuid
+      security:
+        - BearerAuth: []
       requestBody:
         required: true
         content:
@@ -225,13 +194,9 @@ paths:
       tags:
         - Categories
       summary: Get category by ID
+      security:
+        - BearerAuth: []
       parameters:
-        - name: X-User-ID
-          in: header
-          required: false
-          schema:
-            type: string
-            format: uuid
         - name: id
           in: path
           required: true
@@ -251,13 +216,9 @@ paths:
       tags:
         - Categories
       summary: Update category
+      security:
+        - BearerAuth: []
       parameters:
-        - name: X-User-ID
-          in: header
-          required: true
-          schema:
-            type: string
-            format: uuid
         - name: id
           in: path
           required: true
@@ -282,13 +243,9 @@ paths:
       tags:
         - Categories
       summary: Delete category
+      security:
+        - BearerAuth: []
       parameters:
-        - name: X-User-ID
-          in: header
-          required: true
-          schema:
-            type: string
-            format: uuid
         - name: id
           in: path
           required: true
@@ -302,6 +259,12 @@ paths:
           description: Not found
 
 components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT from POST /auth/login
   schemas:
     Expense:
       type: object

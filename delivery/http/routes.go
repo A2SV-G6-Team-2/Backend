@@ -3,20 +3,23 @@ package http
 import (
 	"net/http"
 	"strings"
+
+	"expense_tracker/infrastructure/auth"
 )
 
-// Router holds handlers and serves routes
+// Router holds handlers and serves routes (expenses, categories, api-docs).
 type Router struct {
 	Expense  *ExpenseHandler
 	Category *CategoryHandler
+	JWT      *auth.JWTService
 }
 
-// NewRouter creates a new router with the given handlers
-func NewRouter(expense *ExpenseHandler, category *CategoryHandler) *Router {
-	return &Router{Expense: expense, Category: category}
+// NewRouter creates a new router with the given handlers and JWT service for auth.
+func NewRouter(expense *ExpenseHandler, category *CategoryHandler, jwtSvc *auth.JWTService) *Router {
+	return &Router{Expense: expense, Category: category, JWT: jwtSvc}
 }
 
-// Handler returns the main HTTP handler with middleware applied
+// Handler returns the main HTTP handler with JWT auth applied to expense/category routes.
 func (rt *Router) Handler() http.Handler {
 	mux := http.NewServeMux()
 
@@ -28,7 +31,7 @@ func (rt *Router) Handler() http.Handler {
 	mux.HandleFunc("/categories", rt.categoryBase)
 	mux.HandleFunc("/categories/", rt.categoryByID)
 
-	// API documentation (Swagger UI) at /api-docs
+	// API documentation (Swagger UI) at /api-docs — public
 	ServeAPIDocs(mux)
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
@@ -40,7 +43,7 @@ func (rt *Router) Handler() http.Handler {
 		w.Write([]byte(`{"service":"Personal Expense Tracker","expenses":"/expenses","categories":"/categories"}`))
 	})
 
-	return MockUserIDMiddleware(mux)
+	return JWTAuthMiddleware(rt.JWT, mux)
 }
 
 func (rt *Router) expenseBase(w http.ResponseWriter, r *http.Request) {
