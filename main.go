@@ -54,7 +54,9 @@ func main() {
 	httpdelivery.RegisterCategoryRoutes(mux, categoryHandler)
 	httpdelivery.ServeAPIDocs(mux)
 
-	handler := httpdelivery.MockUserIDMiddleware(mux)
+	// JWT auth for /expenses and /categories; other routes unchanged
+	handler := httpdelivery.JWTAuthMiddleware(jwtSvc, mux)
+
 	log.Println("Server started on :8080")
 	if err := http.ListenAndServe(":8080", handler); err != nil {
 		log.Fatalf("server stopped: %v", err)

@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-// RegisterDebtRoutes registers debt endpoints on mux (HEAD branch)
+// RegisterDebtRoutes registers debt endpoints on mux.
 func RegisterDebtRoutes(mux *http.ServeMux, handler *DebtHandler) {
 	if mux == nil || handler == nil {
 		return
@@ -48,7 +48,7 @@ func RegisterDebtRoutes(mux *http.ServeMux, handler *DebtHandler) {
 	})
 }
 
-// RegisterExpenseRoutes registers expense endpoints on mux (Team 2)
+// RegisterExpenseRoutes registers expense endpoints on mux (Team 2).
 func RegisterExpenseRoutes(mux *http.ServeMux, handler *ExpenseHandler) {
 	if mux == nil || handler == nil {
 		return

@@ -46,11 +46,11 @@ Server listens on `:8080` (or `PORT` env var).
 
 ## Team 2: Expenses & Categories API
 
-Expense and category endpoints use **mock user ID** for this week. Send the header:
+Expense and category endpoints **require JWT authentication** (same as User profile). Obtain a token via `POST /auth/login`, then send:
 
-- **`X-User-ID`**: UUID of the current user (e.g. `8f3b2c9e-6d1a-4a9f-bc21-4e9f0a2d7c33`)
+- **`Authorization: Bearer <token>`**
 
-All expense and category operations are scoped to this user (ownership checks).
+All expense and category operations are scoped to the authenticated user (ownership checks). `/api-docs` and `/` remain public.
 
 ### Expenses
 
@@ -75,19 +75,24 @@ All expense and category operations are scoped to this user (ownership checks).
 ### Example (curl)
 
 ```bash
-# Create category (user-defined)
+# 1. Login to get token
+TOKEN=$(curl -s -X POST http://localhost:8080/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"user@example.com","password":"yourpassword"}' | jq -r '.token')
+
+# 2. Create category (user-defined)
 curl -X POST http://localhost:8080/categories \
   -H "Content-Type: application/json" \
-  -H "X-User-ID: 8f3b2c9e-6d1a-4a9f-bc21-4e9f0a2d7c33" \
+  -H "Authorization: Bearer $TOKEN" \
   -d '{"name":"Food"}'
 
-# Create expense
+# 3. Create expense
 curl -X POST http://localhost:8080/expenses \
   -H "Content-Type: application/json" \
-  -H "X-User-ID: 8f3b2c9e-6d1a-4a9f-bc21-4e9f0a2d7c33" \
+  -H "Authorization: Bearer $TOKEN" \
   -d '{"amount":50,"expense_date":"2026-02-12","category_id":"<category-uuid>","note":"Lunch"}'
 
-# List expenses (optional filters)
-curl -H "X-User-ID: 8f3b2c9e-6d1a-4a9f-bc21-4e9f0a2d7c33" \
+# 4. List expenses (optional filters)
+curl -H "Authorization: Bearer $TOKEN" \
   "http://localhost:8080/expenses?from_date=2026-02-01&to_date=2026-02-28"
 ```
