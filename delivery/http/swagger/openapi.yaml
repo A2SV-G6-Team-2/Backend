@@ -1,0 +1,394 @@
+openapi: 3.0.3
+info:
+  title: Personal Expense Tracker API
+  description: |
+    Student Personal Expense Tracker – Team 2 endpoints (Expenses & Categories).
+    **Expenses and Categories require JWT.** Use `Authorization: Bearer <token>` (obtain token via POST /auth/login).
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:8080
+    description: Local
+
+tags:
+  - name: Expenses
+    description: Team 2 – Daily expense logging and management (JWT required)
+  - name: Categories
+    description: Team 2 – Spending categories (JWT required for write; optional for list/get)
+
+paths:
+  /expenses:
+    get:
+      tags:
+        - Expenses
+      summary: List expenses
+      description: List expenses for the current user. Optional filters by date range and category.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: from_date
+          in: query
+          description: Start date (YYYY-MM-DD)
+          schema:
+            type: string
+            format: date
+        - name: to_date
+          in: query
+          description: End date (YYYY-MM-DD)
+          schema:
+            type: string
+            format: date
+        - name: category_id
+          in: query
+          description: Filter by category UUID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: List of expenses
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Expense'
+        '401':
+          description: Missing or invalid authorization
+    post:
+      tags:
+        - Expenses
+      summary: Create expense
+      description: Create a new expense for the current user.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateExpenseRequest'
+      responses:
+        '201':
+          description: Created expense
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Expense'
+        '400':
+          description: Validation error
+        '401':
+          description: Missing or invalid authorization
+
+  /expenses/{id}:
+    get:
+      tags:
+        - Expenses
+      summary: Get expense by ID
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Expense
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Expense'
+        '404':
+          description: Not found
+    put:
+      tags:
+        - Expenses
+      summary: Update expense
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateExpenseRequest'
+      responses:
+        '200':
+          description: Updated expense
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Expense'
+        '404':
+          description: Not found
+    delete:
+      tags:
+        - Expenses
+      summary: Delete expense
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Deleted
+        '404':
+          description: Not found
+
+  /categories:
+    get:
+      tags:
+        - Categories
+      summary: List categories
+      description: List global and user-defined categories for the authenticated user. Requires JWT.
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of categories
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Category'
+    post:
+      tags:
+        - Categories
+      summary: Create category
+      description: Create a global or user-defined category.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCategoryRequest'
+      responses:
+        '201':
+          description: Created category
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Category'
+        '400':
+          description: Validation error
+
+  /categories/{id}:
+    get:
+      tags:
+        - Categories
+      summary: Get category by ID
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Category
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Category'
+        '404':
+          description: Not found
+    put:
+      tags:
+        - Categories
+      summary: Update category
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCategoryRequest'
+      responses:
+        '200':
+          description: Updated category
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Category'
+        '404':
+          description: Not found
+    delete:
+      tags:
+        - Categories
+      summary: Delete category
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Deleted
+        '404':
+          description: Not found
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT from POST /auth/login
+  schemas:
+    Expense:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        amount:
+          type: number
+          format: double
+        category_id:
+          type: string
+          format: uuid
+          nullable: true
+        is_recurring:
+          type: boolean
+        recurrence_type:
+          type: string
+          enum: [daily, weekly, monthly]
+        next_due_date:
+          type: string
+          format: date
+          nullable: true
+        reminder_enabled:
+          type: boolean
+        reminder_sent_at:
+          type: string
+          format: date-time
+          nullable: true
+        note:
+          type: string
+        expense_date:
+          type: string
+          format: date
+        created_at:
+          type: string
+          format: date-time
+    CreateExpenseRequest:
+      type: object
+      required:
+        - amount
+        - expense_date
+      properties:
+        id:
+          type: string
+          format: uuid
+        amount:
+          type: number
+          format: double
+          minimum: 0
+        category_id:
+          type: string
+          format: uuid
+          nullable: true
+        is_recurring:
+          type: boolean
+          default: false
+        recurrence_type:
+          type: string
+          enum: [daily, weekly, monthly]
+        next_due_date:
+          type: string
+          format: date
+        reminder_enabled:
+          type: boolean
+        note:
+          type: string
+        expense_date:
+          type: string
+          format: date
+    UpdateExpenseRequest:
+      type: object
+      properties:
+        amount:
+          type: number
+          format: double
+          minimum: 0
+        category_id:
+          type: string
+          format: uuid
+          nullable: true
+        is_recurring:
+          type: boolean
+        recurrence_type:
+          type: string
+          enum: [daily, weekly, monthly]
+        next_due_date:
+          type: string
+          format: date
+        reminder_enabled:
+          type: boolean
+        note:
+          type: string
+        expense_date:
+          type: string
+          format: date
+    Category:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        user_id:
+          type: string
+          format: uuid
+          nullable: true
+    CreateCategoryRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+        user_id:
+          type: string
+          format: uuid
+          nullable: true
+    UpdateCategoryRequest:
+      type: object
+      properties:
+        name:
+          type: string
