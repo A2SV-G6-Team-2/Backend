@@ -31,10 +31,10 @@ type WeeklyCategorySummary struct {
 
 type reportUsecase struct {
 	expenseRepo repository.ExpenseRepository
-	debtRepo    repository.DebtRepository
+	debtRepo    repository.DebtReportRepository
 }
 
-func NewReportUsecase(expenseRepo repository.ExpenseRepository, debtRepo repository.DebtRepository) ReportUsecase {
+func NewReportUsecase(expenseRepo repository.ExpenseRepository, debtRepo repository.DebtReportRepository) ReportUsecase {
 	return &reportUsecase{expenseRepo: expenseRepo, debtRepo: debtRepo}
 }
 
