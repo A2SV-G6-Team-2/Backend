@@ -3,6 +3,7 @@ package http
 import (
 	"encoding/json"
 	"expense_tracker/domain"
+	"expense_tracker/infrastructure/auth"
 	"expense_tracker/usecases"
 	"net/http"
 	"strconv"
@@ -12,10 +13,11 @@ import (
 
 type DebtHandler struct {
 	usecase *usecases.DebtUsecase
+	jwt     *auth.JWTService
 }
 
-func NewDebtHandler(usecase *usecases.DebtUsecase) *DebtHandler {
-	return &DebtHandler{usecase: usecase}
+func NewDebtHandler(usecase *usecases.DebtUsecase, jwt *auth.JWTService) *DebtHandler {
+	return &DebtHandler{usecase: usecase, jwt: jwt}
 }
 
 type createDebtRequest struct {
@@ -39,6 +41,11 @@ type updateDebtRequest struct {
 }
 
 func (h *DebtHandler) CreateDebt(w http.ResponseWriter, r *http.Request) {
+	userID, ok := h.authenticatedUserID(w, r)
+	if !ok {
+		return
+	}
+
 	var req createDebtRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
@@ -53,7 +60,7 @@ func (h *DebtHandler) CreateDebt(w http.ResponseWriter, r *http.Request) {
 
 	debt := &domain.Debt{
 		ID:              req.ID,
-		UserID:          req.UserID,
+		UserID:          userID,
 		Type:            req.Type,
 		PeerName:        req.PeerName,
 		Amount:          req.Amount,
@@ -71,14 +78,29 @@ func (h *DebtHandler) CreateDebt(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *DebtHandler) UpdateDebt(w http.ResponseWriter, r *http.Request) {
+	userID, ok := h.authenticatedUserID(w, r)
+	if !ok {
+		return
+	}
+
 	debtID := extractDebtID(r.URL.Path)
 	if debtID == "" {
 		writeError(w, http.StatusBadRequest, "missing debt id")
 		return
 	}
 
+	existingDebt, err := h.usecase.GetByID(r.Context(), debtID)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	if existingDebt.UserID != userID {
+		writeError(w, http.StatusForbidden, "forbidden")
+		return
+	}
+
 	var req updateDebtRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err = json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -108,9 +130,24 @@ func (h *DebtHandler) UpdateDebt(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *DebtHandler) MarkDebtPaid(w http.ResponseWriter, r *http.Request) {
+	userID, ok := h.authenticatedUserID(w, r)
+	if !ok {
+		return
+	}
+
 	debtID := extractDebtID(r.URL.Path)
 	if debtID == "" {
 		writeError(w, http.StatusBadRequest, "missing debt id")
+		return
+	}
+
+	existingDebt, err := h.usecase.GetByID(r.Context(), debtID)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	if existingDebt.UserID != userID {
+		writeError(w, http.StatusForbidden, "forbidden")
 		return
 	}
 
@@ -124,7 +161,11 @@ func (h *DebtHandler) MarkDebtPaid(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *DebtHandler) ListDebts(w http.ResponseWriter, r *http.Request) {
-	userID := r.URL.Query().Get("user_id")
+	userID, ok := h.authenticatedUserID(w, r)
+	if !ok {
+		return
+	}
+
 	debts, err := h.usecase.ListByUser(r.Context(), userID)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
@@ -135,9 +176,8 @@ func (h *DebtHandler) ListDebts(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *DebtHandler) ListUpcomingDebts(w http.ResponseWriter, r *http.Request) {
-	userID := r.URL.Query().Get("user_id")
-	if userID == "" {
-		writeError(w, http.StatusBadRequest, "missing user_id")
+	userID, ok := h.authenticatedUserID(w, r)
+	if !ok {
 		return
 	}
 
@@ -185,4 +225,26 @@ func writeJSON(w http.ResponseWriter, status int, payload any) {
 
 func writeError(w http.ResponseWriter, status int, message string) {
 	writeJSON(w, status, map[string]string{"error": message})
+}
+
+func (h *DebtHandler) authenticatedUserID(w http.ResponseWriter, r *http.Request) (string, bool) {
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		writeError(w, http.StatusUnauthorized, "missing authorization header")
+		return "", false
+	}
+
+	tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
+	if tokenStr == authHeader {
+		writeError(w, http.StatusUnauthorized, "invalid authorization header")
+		return "", false
+	}
+
+	userID, err := h.jwt.Validate(tokenStr)
+	if err != nil {
+		writeError(w, http.StatusUnauthorized, "invalid token")
+		return "", false
+	}
+
+	return userID.String(), true
 }

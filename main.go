@@ -36,7 +36,7 @@ func main() {
 	authHandler := httpdelivery.NewAuthHandler(authUC)
 	userHandler := httpdelivery.NewUserHandler(userUC, jwtSvc)
 	reportHandler := httpdelivery.NewReportHandler(reportUC, jwtSvc)
-	debtHandler := httpdelivery.NewDebtHandler(debtUsecase)
+	debtHandler := httpdelivery.NewDebtHandler(debtUsecase, jwtSvc)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/auth/register", authHandler.Register)
