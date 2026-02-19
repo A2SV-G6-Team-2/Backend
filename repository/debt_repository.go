@@ -3,6 +3,9 @@ package repository
 import (
 	"context"
 	"expense_tracker/domain"
+	"time"
+
+	"github.com/google/uuid"
 )
 
 type DebtRepository interface {
@@ -15,4 +18,8 @@ type DebtRepository interface {
 	SetOverdue(ctx context.Context, nowUTC string) (int64, error)
 	GetDueForReminder(ctx context.Context, nowUTC string) ([]*domain.Debt, error)
 	UpdateReminder(ctx context.Context, id string, remindAtUTC string, sentAtUTC string) error
+}
+
+type DebtReportRepository interface {
+	SumByDateRangeAndType(ctx context.Context, userID uuid.UUID, startDate, endDate time.Time, debtType string) (float64, error)
 }
