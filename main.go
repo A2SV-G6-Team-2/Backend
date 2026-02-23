@@ -5,50 +5,49 @@ import (
 	"net/http"
 	"os"
 
-	delivery "expense_tracker/delivery/http"
+	httpdelivery "expense_tracker/delivery/http"
 	"expense_tracker/infrastructure/auth"
 	"expense_tracker/infrastructure/db"
+	infrarepo "expense_tracker/infrastructure/repository"
 	"expense_tracker/infrastructure/repositoryPG"
-
 	"expense_tracker/usecases"
 )
 
 func main() {
 	log.Println("Starting Expense Tracker server...")
 
-	// Initialize DB
 	if err := db.DB_Init(); err != nil {
-		log.Fatal(err)
+		log.Fatalf("failed to initialize database: %v", err)
 	}
 
-	// Repositories
 	userRepo := repositoryPG.NewUserRepoPG(db.DB)
 	expenseRepo := repositoryPG.NewExpenseRepoPG(db.DB)
-	debtRepo := repositoryPG.NewDebtRepoPG(db.DB)
+	debtReportRepo := repositoryPG.NewDebtRepoPG(db.DB)
+	debtRepo := infrarepo.NewDebtRepositoryPG(db.DB)
 
-	// Infrastructure services
 	hasher := auth.BcryptHasher{}
 	jwtSvc := auth.NewJWTService(os.Getenv("JWT_SECRET"))
 
-	// Usecases
 	authUC := usecases.NewAuthUsecase(userRepo, hasher, jwtSvc)
 	userUC := usecases.NewUserUsecase(userRepo)
-	reportUC := usecases.NewReportUsecase(expenseRepo, debtRepo)
+	reportUC := usecases.NewReportUsecase(expenseRepo, debtReportRepo)
+	debtUsecase := usecases.NewDebtUsecase(debtRepo)
 
-	// Handlers
-	authHandler := delivery.NewAuthHandler(authUC)
-	userHandler := delivery.NewUserHandler(userUC, jwtSvc)
-	reportHandler := delivery.NewReportHandler(reportUC, jwtSvc)
+	authHandler := httpdelivery.NewAuthHandler(authUC)
+	userHandler := httpdelivery.NewUserHandler(userUC, jwtSvc)
+	reportHandler := httpdelivery.NewReportHandler(reportUC, jwtSvc)
+	debtHandler := httpdelivery.NewDebtHandler(debtUsecase, jwtSvc)
 
-	// Routes
 	mux := http.NewServeMux()
 	mux.HandleFunc("/auth/register", authHandler.Register)
 	mux.HandleFunc("/auth/login", authHandler.Login)
 	mux.HandleFunc("/user/profile", userHandler.GetProfile)
 	mux.HandleFunc("/user/update", userHandler.UpdateProfile)
 	mux.HandleFunc("/reports/weekly", reportHandler.GetWeeklyReport)
+	httpdelivery.RegisterDebtRoutes(mux, debtHandler)
 
-	// Start server
 	log.Println("Server started on :8080")
-	log.Fatal(http.ListenAndServe(":8080", mux))
+	if err := http.ListenAndServe(":8080", mux); err != nil {
+		log.Fatalf("server stopped: %v", err)
+	}
 }
