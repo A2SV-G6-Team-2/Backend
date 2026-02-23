@@ -21,9 +21,10 @@ func main() {
 	}
 
 	userRepo := repositoryPG.NewUserRepoPG(db.DB)
-	expenseRepo := repositoryPG.NewExpenseRepoPG(db.DB)
+	expenseRepo := infrarepo.NewExpenseRepoPG(db.DB)
 	debtReportRepo := repositoryPG.NewDebtRepoPG(db.DB)
 	debtRepo := infrarepo.NewDebtRepositoryPG(db.DB)
+	categoryRepo := infrarepo.NewCategoryRepoPG(db.DB)
 
 	hasher := auth.BcryptHasher{}
 	jwtSvc := auth.NewJWTService(os.Getenv("JWT_SECRET"))
@@ -32,11 +33,15 @@ func main() {
 	userUC := usecases.NewUserUsecase(userRepo)
 	reportUC := usecases.NewReportUsecase(expenseRepo, debtReportRepo)
 	debtUsecase := usecases.NewDebtUsecase(debtRepo)
+	expenseUC := usecases.NewExpenseUseCase(expenseRepo)
+	categoryUC := usecases.NewCategoryUseCase(categoryRepo)
 
 	authHandler := httpdelivery.NewAuthHandler(authUC)
 	userHandler := httpdelivery.NewUserHandler(userUC, jwtSvc)
 	reportHandler := httpdelivery.NewReportHandler(reportUC, jwtSvc)
 	debtHandler := httpdelivery.NewDebtHandler(debtUsecase, jwtSvc)
+	expenseHandler := httpdelivery.NewExpenseHandler(expenseUC)
+	categoryHandler := httpdelivery.NewCategoryHandler(categoryUC)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/auth/register", authHandler.Register)
@@ -45,9 +50,15 @@ func main() {
 	mux.HandleFunc("/user/update", userHandler.UpdateProfile)
 	mux.HandleFunc("/reports/weekly", reportHandler.GetWeeklyReport)
 	httpdelivery.RegisterDebtRoutes(mux, debtHandler)
+	httpdelivery.RegisterExpenseRoutes(mux, expenseHandler)
+	httpdelivery.RegisterCategoryRoutes(mux, categoryHandler)
+	httpdelivery.ServeAPIDocs(mux)
+
+	// JWT auth for /expenses and /categories; other routes unchanged
+	handler := httpdelivery.JWTAuthMiddleware(jwtSvc, mux)
 
 	log.Println("Server started on :8080")
-	if err := http.ListenAndServe(":8080", mux); err != nil {
+	if err := http.ListenAndServe(":8080", handler); err != nil {
 		log.Fatalf("server stopped: %v", err)
 	}
 }
