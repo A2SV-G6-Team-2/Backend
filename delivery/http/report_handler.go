@@ -65,3 +65,50 @@ func (h *ReportHandler) GetWeeklyReport(w http.ResponseWriter, r *http.Request) 
 
 	utils.WriteJSON(w, http.StatusOK, utils.Envelope{"data": weeklyReport})
 }
+
+func (h *ReportHandler) GetMonthlyReport(w http.ResponseWriter, r *http.Request) {
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		utils.WriteJSON(w, http.StatusUnauthorized, utils.Envelope{"error": "missing authorization header"})
+		return
+	}
+
+	tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
+	userID, err := h.jwt.Validate(tokenStr)
+	if err != nil {
+		utils.WriteJSON(w, http.StatusUnauthorized, utils.Envelope{"error": "invalid token"})
+		return
+	}
+
+	query := r.URL.Query()
+	startDateParam := query.Get("start")
+	endDateParam := query.Get("end")
+	if startDateParam == "" || endDateParam == "" {
+		utils.WriteJSON(w, http.StatusBadRequest, utils.Envelope{"error": "start and end are required"})
+		return
+	}
+
+	layout := "2006-01-02"
+	startDate, err := time.Parse(layout, startDateParam)
+	if err != nil {
+		utils.WriteJSON(w, http.StatusBadRequest, utils.Envelope{"error": "invalid start date"})
+		return
+	}
+	endDate, err := time.Parse(layout, endDateParam)
+	if err != nil {
+		utils.WriteJSON(w, http.StatusBadRequest, utils.Envelope{"error": "invalid end date"})
+		return
+	}
+
+	monthlyReport, err := h.reportUC.GetMonthlyReport(r.Context(), userID, startDate, endDate)
+	if err != nil {
+		if errors.Is(err, usecases.ErrInvalidDateRange) {
+			utils.WriteJSON(w, http.StatusBadRequest, utils.Envelope{"error": err.Error()})
+			return
+		}
+		utils.WriteJSON(w, http.StatusInternalServerError, utils.Envelope{"error": "internal server error"})
+		return
+	}
+
+	utils.WriteJSON(w, http.StatusOK, utils.Envelope{"data": monthlyReport})
+}
