@@ -20,6 +20,48 @@ func NewReportHandler(uc usecases.ReportUsecase, jwt *auth.JWTService) *ReportHa
 	return &ReportHandler{reportUC: uc, jwt: jwt}
 }
 
+// Daily Handler
+
+func (h *ReportHandler) GetDailyReport(w http.ResponseWriter, r *http.Request) {
+
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		utils.WriteJSON(w, http.StatusUnauthorized, utils.Envelope{"error": "missing authorization header"})
+		return
+	}
+
+	tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
+	userID, err := h.jwt.Validate(tokenStr)
+	if err != nil {
+		utils.WriteJSON(w, http.StatusUnauthorized, utils.Envelope{"error": "invalid token"})
+		return
+	}
+
+	query := r.URL.Query()
+	dateParam := query.Get("date")
+
+	if dateParam == "" {
+		utils.WriteJSON(w, http.StatusBadRequest, utils.Envelope{"error": "date is required"})
+		return
+	}
+
+	layout := "2006-01-02"
+
+	date, err := time.Parse(layout, dateParam)
+	if err != nil {
+		utils.WriteJSON(w, http.StatusBadRequest, utils.Envelope{"error": "invalid date format"})
+		return
+	}
+
+	dailyReport, err := h.reportUC.GetDailyReport(r.Context(), userID, date)
+	if err != nil {
+		utils.WriteJSON(w, http.StatusInternalServerError, utils.Envelope{"error": "internal server error"})
+		return
+	}
+
+	utils.WriteJSON(w, http.StatusOK, utils.Envelope{"data": dailyReport})
+}
+
 func (h *ReportHandler) GetWeeklyReport(w http.ResponseWriter, r *http.Request) {
 	authHeader := r.Header.Get("Authorization")
 	if authHeader == "" {
@@ -121,4 +163,5 @@ func (h *ReportHandler) GetMonthlyReport(w http.ResponseWriter, r *http.Request)
 	}
 
 	utils.WriteJSON(w, http.StatusOK, utils.Envelope{"data": monthlyReport})
+}
 }
