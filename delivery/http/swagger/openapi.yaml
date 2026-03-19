@@ -15,10 +15,10 @@ info:
   version: 1.0.0
 
 servers:
+  - url: http://159.89.165.171:8080
+    description: Production server
   - url: http://localhost:8080
     description: Local development server
-  - url: https://your-app.onrender.com
-    description: Production server (update after deployment)
 
 tags:
   - name: Authentication
