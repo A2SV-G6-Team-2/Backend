@@ -107,3 +107,44 @@ func (h *ReportHandler) GetWeeklyReport(w http.ResponseWriter, r *http.Request) 
 
 	utils.WriteJSON(w, http.StatusOK, utils.Envelope{"data": weeklyReport})
 }
+
+// Monthly Handler
+func (h *ReportHandler) GetMonthlyReport(w http.ResponseWriter, r *http.Request) {
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		utils.WriteJSON(w, http.StatusUnauthorized, utils.Envelope{"error": "missing authorization header"})
+		return
+	}
+
+	tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
+	userID, err := h.jwt.Validate(tokenStr)
+	if err != nil {
+		utils.WriteJSON(w, http.StatusUnauthorized, utils.Envelope{"error": "invalid token"})
+		return
+	}
+
+	query := r.URL.Query()
+	monthParam := query.Get("month")
+	if monthParam == "" {
+		utils.WriteJSON(w, http.StatusBadRequest, utils.Envelope{"error": "month is required (YYYY-MM)"})
+		return
+	}
+
+	layout := "2006-01"
+	parsed, err := time.Parse(layout, monthParam)
+	if err != nil {
+		utils.WriteJSON(w, http.StatusBadRequest, utils.Envelope{"error": "invalid month format"})
+		return
+	}
+
+	year := parsed.Year()
+	month := parsed.Month()
+
+	monthlyReport, err := h.reportUC.GetMonthlyReport(r.Context(), userID, year, month)
+	if err != nil {
+		utils.WriteJSON(w, http.StatusInternalServerError, utils.Envelope{"error": "internal server error"})
+		return
+	}
+
+	utils.WriteJSON(w, http.StatusOK, utils.Envelope{"data": monthlyReport})
+}

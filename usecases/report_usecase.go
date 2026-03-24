@@ -11,17 +11,19 @@ import (
 
 // Daily Report Model
 type DailyReport struct {
-	Date			  string  `json:"date"`
-	TotalExpense      float64 `json:"total-expense"`
-	TotalLent         float64 `json:"total-lent"`
-	TotalBorrowed     float64 `json:"total-borrowed"`
+	Date          string  `json:"date"`
+	TotalExpense  float64 `json:"total-expense"`
+	TotalLent     float64 `json:"total-lent"`
+	TotalBorrowed float64 `json:"total-borrowed"`
 }
-
 
 type ReportUsecase interface {
 	GetWeeklyReport(ctx context.Context, userID uuid.UUID, startDate, endDate time.Time) (WeeklyReport, error)
-	
+
 	GetDailyReport(ctx context.Context, userID uuid.UUID, date time.Time) (DailyReport, error)
+
+	// Monthly report for a given year and month
+	GetMonthlyReport(ctx context.Context, userID uuid.UUID, year int, month time.Month) (MonthlyReport, error)
 }
 
 var ErrInvalidDateRange = errors.New("end date must be on or after start date")
@@ -49,16 +51,15 @@ func NewReportUsecase(expenseRepo repository.ExpenseRepository, debtRepo reposit
 	return &reportUsecase{expenseRepo: expenseRepo, debtRepo: debtRepo}
 }
 
-
 // Daily Usecase Logic
 func (r *reportUsecase) GetDailyReport(ctx context.Context, userID uuid.UUID, date time.Time) (DailyReport, error) {
 
-	totalExpense, err:= r.expenseRepo.SumByDateRange(ctx, userID, date, date)
+	totalExpense, err := r.expenseRepo.SumByDateRange(ctx, userID, date, date)
 	if err != nil {
 		return DailyReport{}, err
 	}
 
-	totalLent, err:= r.debtRepo.SumByDateRangeAndType(ctx, userID, date, date, "lent")
+	totalLent, err := r.debtRepo.SumByDateRangeAndType(ctx, userID, date, date, "lent")
 	if err != nil {
 		return DailyReport{}, err
 	}
@@ -69,13 +70,64 @@ func (r *reportUsecase) GetDailyReport(ctx context.Context, userID uuid.UUID, da
 	}
 
 	return DailyReport{
-		Date:           date.Format("2006-01-02"),
-		TotalExpense:   totalExpense,
-		TotalLent:      totalLent,
-		TotalBorrowed:  totalBorrowed,
+		Date:          date.Format("2006-01-02"),
+		TotalExpense:  totalExpense,
+		TotalLent:     totalLent,
+		TotalBorrowed: totalBorrowed,
 	}, nil
 }
 
+// Monthly Usecase Logic
+type MonthlyReport struct {
+	Month             string                  `json:"month"`
+	TotalExpense      float64                 `json:"total_expense"`
+	TotalLent         float64                 `json:"total_lent"`
+	TotalBorrowed     float64                 `json:"total_borrowed"`
+	CategoryBreakdown []WeeklyCategorySummary `json:"category_breakdown"`
+}
+
+func (r *reportUsecase) GetMonthlyReport(ctx context.Context, userID uuid.UUID, year int, month time.Month) (MonthlyReport, error) {
+	// compute start and end dates for the month
+	startDate := time.Date(year, month, 1, 0, 0, 0, 0, time.UTC)
+	// last day of month: go to first day of next month then subtract one day
+	endDate := startDate.AddDate(0, 1, -1)
+
+	totalExpense, err := r.expenseRepo.SumByDateRange(ctx, userID, startDate, endDate)
+	if err != nil {
+		return MonthlyReport{}, err
+	}
+
+	categoryTotals, err := r.expenseRepo.CategoryBreakdownByDateRange(ctx, userID, startDate, endDate)
+	if err != nil {
+		return MonthlyReport{}, err
+	}
+
+	categoryBreakdown := make([]WeeklyCategorySummary, 0, len(categoryTotals))
+	for _, item := range categoryTotals {
+		categoryBreakdown = append(categoryBreakdown, WeeklyCategorySummary{
+			CategoryName: item.CategoryName,
+			Total:        item.Total,
+		})
+	}
+
+	totalLent, err := r.debtRepo.SumByDateRangeAndType(ctx, userID, startDate, endDate, "lent")
+	if err != nil {
+		return MonthlyReport{}, err
+	}
+
+	totalBorrowed, err := r.debtRepo.SumByDateRangeAndType(ctx, userID, startDate, endDate, "borrowed")
+	if err != nil {
+		return MonthlyReport{}, err
+	}
+
+	return MonthlyReport{
+		Month:             startDate.Format("2006-01"),
+		TotalExpense:      totalExpense,
+		TotalLent:         totalLent,
+		TotalBorrowed:     totalBorrowed,
+		CategoryBreakdown: categoryBreakdown,
+	}, nil
+}
 
 func (r *reportUsecase) GetWeeklyReport(ctx context.Context, userID uuid.UUID, startDate, endDate time.Time) (WeeklyReport, error) {
 	if endDate.Before(startDate) {
