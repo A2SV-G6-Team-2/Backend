@@ -50,6 +50,7 @@ func main() {
 	mux.HandleFunc("/user/update", userHandler.UpdateProfile)
 	mux.HandleFunc("/reports/weekly", reportHandler.GetWeeklyReport)
 	mux.HandleFunc("/reports/daily", reportHandler.GetDailyReport)
+	mux.HandleFunc("/reports/monthly", reportHandler.GetMonthlyReport)
 	httpdelivery.RegisterDebtRoutes(mux, debtHandler)
 	httpdelivery.RegisterExpenseRoutes(mux, expenseHandler)
 	httpdelivery.RegisterCategoryRoutes(mux, categoryHandler)
