@@ -6,6 +6,8 @@ import (
 	"expense_tracker/domain"
 	"expense_tracker/repository"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 var (
