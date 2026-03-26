@@ -34,18 +34,6 @@ Go backend for the A2SV Personal Expense Tracker project.
 Copy the example file and adjust it for your local machine:
 
 ```bash
-Postman collection & smoke test
---------------------------------
-
-- Postman collection (importable): `docs/postman_collection.json` — contains basic flows (register -> login -> create debt -> create expense -> list). Import into Postman and run.
-- Smoke-test script: `scripts/smoke-test.sh` — a small bash script that exercises the main flows using curl. It requires `curl` and (optional but recommended) `jq` for parsing. Example:
-
-```bash
-chmod +x scripts/smoke-test.sh
-BASE_URL=http://localhost:8080 ./scripts/smoke-test.sh
-```
-
-If you want a CI-friendly smoke test, I can convert the script into a containerized job or a GitHub Actions workflow.
 cp .env.example .env
 ```
 

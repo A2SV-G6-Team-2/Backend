@@ -23,8 +23,8 @@ info:
     - Interactive API documentation
   version: 1.0.0
 
-# Quick machine-readable summary of endpoints (helps tools and quick index)
-x-summary-endpoints:
+# Quick summary of endpoints
+summary-endpoints:
   - path: /auth/register
     methods: [post]
   - path: /auth/login
@@ -66,8 +66,8 @@ x-summary-endpoints:
   - path: /api-docs/openapi.yaml
     methods: [get]
 
-# Human-friendly notes about specific endpoints and expected request shapes
-x-endpoint-notes:
+# Notes about specific endpoints and expected request shapes
+endpoint-notes:
   /debts:
     POST:
       description: |
@@ -1407,7 +1407,7 @@ components:
               example: null
 
     # ========================================
-    # EXPENSE SCHEMAS (Team 2)
+    # EXPENSE SCHEMAS
     # ========================================
     Expense:
       description: Expense resource
@@ -1562,7 +1562,7 @@ components:
               $ref: '#/components/schemas/Meta'
 
     # ========================================
-    # CATEGORY SCHEMAS (Team 2)
+    # CATEGORY SCHEMAS
     # ========================================
     Category:
       description: Category resource
